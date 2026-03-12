@@ -42,3 +42,43 @@ class IngestResponse(BaseModel):
     status: str
     docs_indexed: int
     chunks_indexed: int
+
+
+# ---------------------------------------------------------------------------
+# Admin
+# ---------------------------------------------------------------------------
+
+class ConversationSummary(BaseModel):
+    session_id: str
+    first_seen: str
+    last_seen: str
+    turn_count: int
+    escalated: bool
+    last_message: str
+
+
+class AdminTurn(BaseModel):
+    timestamp: str
+    user_message: str
+    bot_answer: str
+    confidence: float | None = None
+    escalated: bool
+
+
+class ConversationDetail(BaseModel):
+    session_id: str
+    turns: list[AdminTurn]
+
+
+class AdminStats(BaseModel):
+    total_conversations: int
+    total_turns: int
+    escalated_count: int
+    avg_confidence: float
+
+
+class ConversationsResponse(BaseModel):
+    items: list[ConversationSummary]
+    total: int
+    page: int
+    page_size: int

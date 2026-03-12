@@ -196,3 +196,117 @@ async def ingest(request: Request, _: None = Depends(verify_admin)) -> IngestRes
         docs_indexed=docs_indexed,
         chunks_indexed=len(all_chunks),
     )
+
+
+# ---------------------------------------------------------------------------
+# Admin routes
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/stats")
+async def admin_stats(
+    request: Request,
+    _: None = Depends(verify_admin),
+) -> dict:
+    import aiosqlite
+    db_path = request.app.state.conv_logger._db_path
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+            "SELECT COUNT(DISTINCT session_id), COUNT(*), SUM(escalated), AVG(confidence) FROM conversation_logs"
+        ) as cur:
+            row = await cur.fetchone()
+    total_conv, total_turns, escalated, avg_conf = row
+    return {
+        "total_conversations": total_conv or 0,
+        "total_turns": total_turns or 0,
+        "escalated_count": int(escalated or 0),
+        "avg_confidence": round(float(avg_conf or 0), 3),
+    }
+
+
+@app.get("/admin/conversations")
+async def admin_conversations(
+    request: Request,
+    _: None = Depends(verify_admin),
+    page: int = 1,
+    page_size: int = 20,
+    escalated_only: bool = False,
+    search: str = "",
+) -> dict:
+    import aiosqlite
+    db_path = request.app.state.conv_logger._db_path
+    where = "WHERE escalated=1" if escalated_only else "WHERE 1=1"
+    params: list = []
+    if search:
+        where += " AND (user_message LIKE ? OR bot_answer LIKE ?)"
+        params += [f"%{search}%", f"%{search}%"]
+
+    offset = (page - 1) * page_size
+
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+            f"SELECT COUNT(DISTINCT session_id) FROM conversation_logs {where}", params
+        ) as cur:
+            total = (await cur.fetchone())[0]
+
+        async with db.execute(
+            f"""
+            SELECT session_id,
+                   MIN(timestamp) as first_seen,
+                   MAX(timestamp) as last_seen,
+                   COUNT(*) as turn_count,
+                   MAX(escalated) as escalated,
+                   (SELECT user_message FROM conversation_logs c2
+                    WHERE c2.session_id = c1.session_id
+                    ORDER BY timestamp DESC LIMIT 1) as last_message
+            FROM conversation_logs c1
+            {where}
+            GROUP BY session_id
+            ORDER BY last_seen DESC
+            LIMIT ? OFFSET ?
+            """,
+            params + [page_size, offset],
+        ) as cur:
+            rows = await cur.fetchall()
+
+    items = [
+        {
+            "session_id": r[0],
+            "first_seen": r[1],
+            "last_seen": r[2],
+            "turn_count": r[3],
+            "escalated": bool(r[4]),
+            "last_message": (r[5] or "")[:120],
+        }
+        for r in rows
+    ]
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+
+@app.get("/admin/conversations/{session_id}")
+async def admin_conversation_detail(
+    session_id: str,
+    request: Request,
+    _: None = Depends(verify_admin),
+) -> dict:
+    import aiosqlite
+    db_path = request.app.state.conv_logger._db_path
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+            "SELECT timestamp, user_message, bot_answer, confidence, escalated "
+            "FROM conversation_logs WHERE session_id=? ORDER BY timestamp ASC",
+            (session_id,),
+        ) as cur:
+            rows = await cur.fetchall()
+    if not rows:
+        raise HTTPException(status_code=404, detail="Session not found")
+    turns = [
+        {
+            "timestamp": r[0],
+            "user_message": r[1],
+            "bot_answer": r[2],
+            "confidence": r[3],
+            "escalated": bool(r[4]),
+        }
+        for r in rows
+    ]
+    return {"session_id": session_id, "turns": turns}
