@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment
+.env
+
+# Data & index (generated, not source)
+data/index/
+data/embedding_cache.json
+data/conversations.db
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
