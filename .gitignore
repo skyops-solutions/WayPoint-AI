@@ -31,3 +31,8 @@ frontend/.env
 .vscode/
 .idea/
 *.swp
+
+# Internal project docs
+phases/
+CLAUDE.md
+project_specs.md
