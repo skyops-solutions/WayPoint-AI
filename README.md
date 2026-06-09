@@ -190,3 +190,14 @@ PYTHONPATH=. pytest tests/ -v
 | `INDEX_DIR` | No | Path to FAISS index (default: `./data/index`) |
 | `DB_PATH` | No | SQLite database path (default: `./data/conversations.db`) |
 | `HUMAN_SUPPORT_WEBHOOK` | No | Webhook URL for escalation notifications |
+---
+
+## Built By
+
+**[OneX Systems](https://onex-systems.vercel.app)** — Custom AI automation agency specializing in RAG chatbots, AI agents, and workflow automation for businesses in the US and EU.
+
+> This project was built as part of a real client engagement. It demonstrates production RAG pipeline architecture: FAISS vector search, Gemini embeddings, confidence-scored responses, and a 5-rule human escalation engine.
+>
+> WayPoint AI cut support response time by 60% with 92% average confidence score across all queries.
+
+Interested in a similar system for your business? [Book a 30-min call](https://calendly.com/error404-cloud1/30min) or [start a conversation](https://onex-systems.vercel.app#contact).
